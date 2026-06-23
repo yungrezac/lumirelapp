@@ -79,36 +79,36 @@ app.get('/api/products', async (req, res) => {
                 // Надежная логика пагинации ВБ: передаем их же курсор дальше
                 if (data.cursor && data.cards.length === 100) {
                     currentCursor = data.cursor;
-                    currentCursor.limit = 100;
-                } else {
-                    hasMore = false; // Последняя страница (меньше 100 товаров)
-                }
+            if (data.cursor && data.cursor.updatedAt && data.cursor.nmID && data.cards && data.cards.length === 100) {
+                currentCursor = { 
+                    limit: 100, 
+                    updatedAt: data.cursor.updatedAt, 
+                    nmID: data.cursor.nmID 
+                };
             } else {
-                hasMore = false; // Пустой ответ
+                hasMore = false; // Товары закончились
             }
         }
         
         // Преобразуем формат WB в наш удобный формат для фронтенда
         let products = [];
         if (allCards.length > 0) {
-            // Значительно расширенный список ключевых слов для категории "Красота"
-            const BEAUTY_KEYWORDS = [
-                'крем', 'сыворотк', 'косметик', 'макияж', 'умыван', 'маск', 'патч', 'лосьон', 'тоник', 
-                'шампунь', 'бальзам', 'скраб', 'пилинг', 'гель', 'пен', 'парфюм', 'аромат', 'губ', 'ресниц', 
-                'бровей', 'волос', 'лиц', 'тел', 'красота', 'уход', 'набор', 'подаро', 'мыло', 'масло', 
-                'дезодорант', 'эпиляц', 'депиляц', 'брит', 'ногт', 'маникюр', 'педикюр', 'лак', 'пудра', 
-                'румян', 'хайлайтер', 'бронзер', 'консилер', 'праймер', 'кисть', 'спонж', 'аппликатор', 
-                'пемза', 'соль', 'бомбочк', 'эссенци', 'флюид', 'эмульси', 'мицелляр', 'помад', 'блеск',
-                'тушь', 'тень', 'карандаш', 'спрей', 'духи', 'одеколон'
-            ];
+            // ФИЛЬТР: Проверяем именно массив тегов (ярлыков), заданных в кабинете продавца WB
+            const targetTags = ['беликам', 'интерфармакс'];
             
-            // Фильтруем карточки: оставляем только те, что относятся к бьюти-сфере
-            const beautyCards = allCards.filter(card => {
-                const subject = (card.subjectName || "").toLowerCase();
-                return BEAUTY_KEYWORDS.some(keyword => subject.includes(keyword));
+            const taggedCards = allCards.filter(card => {
+                // Если у товара нет ярлыков, пропускаем его
+                if (!card.tags || !Array.isArray(card.tags)) return false;
+                
+                // Проверяем, есть ли среди ярлыков нужные нам
+                return card.tags.some(tag => {
+                    // API WB может отдавать теги как объекты {id: 1, name: "тег"} или строки
+                    const tagName = typeof tag === 'string' ? tag : (tag.name || '');
+                    return targetTags.includes(tagName.toLowerCase().trim());
+                });
             });
 
-            products = beautyCards.map(card => {
+            products = taggedCards.map(card => {
                 return {
                     id: card.nmID,
                     nmId: card.nmID,
