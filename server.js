@@ -79,14 +79,12 @@ app.get('/api/products', async (req, res) => {
                 // Надежная логика пагинации ВБ: передаем их же курсор дальше
                 if (data.cursor && data.cards.length === 100) {
                     currentCursor = data.cursor;
-            if (data.cursor && data.cursor.updatedAt && data.cursor.nmID && data.cards && data.cards.length === 100) {
-                currentCursor = { 
-                    limit: 100, 
-                    updatedAt: data.cursor.updatedAt, 
-                    nmID: data.cursor.nmID 
-                };
+                    currentCursor.limit = 100;
+                } else {
+                    hasMore = false; // Последняя страница (меньше 100 товаров)
+                }
             } else {
-                hasMore = false; // Товары закончились
+                hasMore = false; // Пустой ответ
             }
         }
         
