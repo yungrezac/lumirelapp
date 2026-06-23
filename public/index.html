@@ -102,7 +102,7 @@
 
     <!-- ГЛАВНЫЙ ЭКРАН -->
     <div id="main-view" class="pb-20">
-        <!-- Шапка (Прокручивается вместе с контентом) -->
+        <!-- Шапка -->
         <header class="bg-tg-bg/90 backdrop-blur-md border-b border-tg-secondaryBg pb-2">
             <!-- Название и кнопка Info -->
             <div class="px-4 py-3 flex justify-between items-center">
@@ -125,14 +125,14 @@
                 </div>
             </div>
 
-            <!-- Фильтры: Категории (горизонтальный скролл) -->
+            <!-- Фильтры: Категории -->
             <div class="px-4 mb-2 overflow-x-auto no-scrollbar">
                 <div id="subcategoriesList" class="flex space-x-2 w-max pb-1">
                     <!-- Заполняется JS -->
                 </div>
             </div>
 
-            <!-- Фильтры: Бренды (Кнопка) -->
+            <!-- Фильтры: Бренды -->
             <div class="px-4 flex items-center justify-between mt-1">
                 <span class="text-sm text-tg-hint font-medium" id="productsCount">Найдено: 0 товаров</span>
                 <button onclick="openBrandsModal()" class="flex items-center space-x-1 text-sm bg-tg-secondaryBg px-3 py-1.5 rounded-lg text-tg-text active:scale-95 transition-transform">
@@ -201,9 +201,8 @@
                 <i class="ph ph-threads-logo text-[28px]"></i>
                 <span class="font-semibold text-[16px]">Threads</span>
             </a>
-            <!-- Max (Стилизованная кастомная кнопка) -->
+            <!-- Max -->
             <a href="#" class="flex items-center space-x-3 p-3.5 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-900 text-white active:scale-[0.98] transition-transform">
-                <!-- Кастомная иконка для Max -->
                 <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
                 <span class="font-semibold text-[16px]">Max</span>
             </a>
@@ -225,7 +224,6 @@
     </div>
 
     <script>
-        // Инициализация Telegram SDK
         const tg = window.Telegram.WebApp;
         tg.expand(); 
         
@@ -344,9 +342,10 @@
                 card.className = "bg-wb-card rounded-xl overflow-hidden shadow-sm border border-tg-secondaryBg flex flex-col active:scale-[0.98] transition-transform";
                 card.onclick = () => openProductDetails(product);
 
+                // Убраны белые рамки, картинка аккуратно заполняет верхнюю часть карточки
                 card.innerHTML = `
-                    <div class="relative w-full aspect-[3/4] bg-white flex items-center justify-center p-1">
-                        <img src="${product.images[0]}" alt="${product.name}" class="w-full h-full object-contain rounded-lg">
+                    <div class="relative w-full aspect-[3/4] bg-tg-secondaryBg flex items-center justify-center overflow-hidden">
+                        <img src="${product.images[0]}" alt="${product.name}" class="w-full h-full object-cover">
                     </div>
                     <div class="p-2 flex flex-col flex-1">
                         <div class="text-[13px] text-tg-hint mb-0.5 font-medium">${product.brand}</div>
@@ -362,8 +361,9 @@
             const view = document.getElementById('product-view');
             const content = document.getElementById('product-content');
 
+            // Увеличена высота до 75vh, убраны белые рамки, используется object-contain для отображения фото без обрезки
             const imagesHtml = product.images.map(img => `
-                <div class="flex-none w-full h-[60vh] snap-center bg-white flex items-center justify-center p-2">
+                <div class="flex-none w-full h-[75vh] snap-center flex items-center justify-center">
                     <img src="${img}" class="w-full h-full object-contain" alt="Product Image">
                 </div>
             `).join('');
@@ -373,7 +373,7 @@
                     ${imagesHtml}
                 </div>
                 
-                <div class="p-4 bg-wb-card rounded-t-2xl -mt-4 relative z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+                <div class="p-4 bg-wb-card rounded-t-2xl -mt-6 relative z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
                     <div class="text-lg font-bold text-tg-hint mb-1">${product.brand}</div>
                     <h1 class="text-xl text-tg-text leading-tight mb-4">${product.name}</h1>
                     <h3 class="font-bold text-lg text-tg-text mb-2">Описание</h3>
