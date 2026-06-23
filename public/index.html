@@ -71,12 +71,6 @@
         .modal-exit-active {
             transform: translateY(100%);
         }
-        
-        /* Линия отреза цены как на WB */
-        .price-strike {
-            text-decoration: line-through;
-            text-decoration-color: var(--tg-theme-hint-color, #999);
-        }
 
         /* Ограничение строк для названия товара */
         .line-clamp-2 {
@@ -95,8 +89,8 @@
 
     <!-- ГЛАВНЫЙ ЭКРАН -->
     <div id="main-view" class="pb-20">
-        <!-- Шапка -->
-        <header class="sticky top-0 z-10 bg-tg-bg/90 backdrop-blur-md border-b border-tg-secondaryBg shadow-sm pb-2">
+        <!-- Шапка: убрали sticky top-0 z-10 чтобы она скроллилась -->
+        <header class="bg-tg-bg border-b border-tg-secondaryBg shadow-sm pb-2">
             <div class="px-4 py-3 flex justify-center items-center">
                 <h1 class="text-xl font-bold bg-gradient-to-r from-wb-purple to-wb-main text-transparent bg-clip-text">lumirex x WB</h1>
             </div>
@@ -302,12 +296,11 @@
             }
 
             filteredProducts.forEach(product => {
-                const discount = Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100);
-                
                 const card = document.createElement('div');
                 card.className = "bg-wb-card rounded-xl overflow-hidden shadow-sm border border-tg-secondaryBg flex flex-col active:scale-[0.98] transition-transform";
                 card.onclick = () => openProductDetails(product);
 
+                // Убраны цены и скидки
                 card.innerHTML = `
                     <div class="relative w-full aspect-[3/4] bg-tg-secondaryBg">
                         <img src="${product.images[0]}" alt="${product.name}" class="w-full h-full object-cover">
@@ -315,15 +308,8 @@
                             <i class="ph-fill ph-star text-yellow-400"></i>
                             <span>${product.rating}</span>
                         </div>
-                        <div class="absolute top-1 left-1 bg-red-500 text-white px-1.5 py-0.5 rounded text-[11px] font-bold">
-                            -${discount}%
-                        </div>
                     </div>
-                    <div class="p-2 flex flex-col flex-1">
-                        <div class="flex items-baseline space-x-1.5 mb-1">
-                            <span class="font-bold text-[16px] text-tg-text">${product.price} ₽</span>
-                            <span class="text-[12px] price-strike">${product.oldPrice} ₽</span>
-                        </div>
+                    <div class="p-2 flex flex-col flex-1 mt-1">
                         <div class="text-[13px] text-tg-hint mb-0.5 font-medium">${product.brand}</div>
                         <div class="text-[12px] text-tg-text leading-tight line-clamp-2">${product.name}</div>
                     </div>
@@ -337,8 +323,6 @@
             currentProduct = product;
             const view = document.getElementById('product-view');
             const content = document.getElementById('product-content');
-            
-            const discount = Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100);
 
             // Генерация изображений (горизонтальный скролл)
             const imagesHtml = product.images.map(img => `
@@ -347,19 +331,14 @@
                 </div>
             `).join('');
 
+            // Убраны цены и скидки
             content.innerHTML = `
                 <div class="w-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar relative bg-tg-secondaryBg">
                     ${imagesHtml}
                 </div>
                 
                 <div class="p-4 bg-wb-card rounded-t-2xl -mt-4 relative z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-                    <div class="flex items-end space-x-3 mb-2">
-                        <span class="text-3xl font-bold text-wb-main">${product.price} ₽</span>
-                        <span class="text-lg price-strike mb-1">${product.oldPrice} ₽</span>
-                        <span class="bg-red-500 text-white px-1.5 py-0.5 rounded text-sm font-bold mb-1">-${discount}%</span>
-                    </div>
-                    
-                    <div class="text-lg font-bold text-tg-hint mb-1">${product.brand}</div>
+                    <div class="text-lg font-bold text-tg-hint mb-1 mt-2">${product.brand}</div>
                     <h1 class="text-xl text-tg-text leading-tight mb-4">${product.name}</h1>
                     
                     <div class="flex items-center space-x-2 text-sm text-tg-hint mb-6 pb-4 border-b border-tg-secondaryBg">
