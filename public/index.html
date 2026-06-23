@@ -247,7 +247,11 @@
                 const response = await fetch('/api/products');
                 if (response.ok) {
                     const data = await response.json();
+                    
+                    // Бэкенд уже отфильтровал товары по ярлыкам WB (БеликаМ, интерфармакс)
+                    // Поэтому просто принимаем готовый массив
                     allProducts = data.products;
+
                 } else {
                     throw new Error("Ошибка загрузки данных с сервера");
                 }
@@ -257,10 +261,17 @@
                 return;
             }
 
+            // Подсчет товаров по подкатегориям для сортировки
+            const subcategoryCounts = {};
+
             allProducts.forEach(p => {
                 availableBrands.add(p.brand);
-                availableSubcategories.add(p.subcategory);
+                subcategoryCounts[p.subcategory] = (subcategoryCounts[p.subcategory] || 0) + 1;
             });
+
+            // СОРТИРОВКА КАТЕГОРИЙ: Сначала те, где больше товаров
+            const sortedSubcategories = Object.keys(subcategoryCounts).sort((a, b) => subcategoryCounts[b] - subcategoryCounts[a]);
+            availableSubcategories = new Set(['Все', ...sortedSubcategories]);
 
             document.getElementById('loading').style.display = 'none';
             
@@ -323,6 +334,15 @@
                 const matchBrand = selectedBrands.size === 0 || selectedBrands.has(p.brand);
                 return matchSearch && matchSub && matchBrand;
             });
+
+            // РАНДОМ: Если выбрана категория "Все", перемешиваем карточки случайным образом
+            if (selectedSubcategory === 'Все') {
+                for (let i = filteredProducts.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [filteredProducts[i], filteredProducts[j]] = [filteredProducts[j], filteredProducts[i]];
+                }
+            }
+
             renderProducts();
         }
 
