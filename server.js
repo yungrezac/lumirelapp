@@ -35,68 +35,100 @@ const MOCK_PRODUCTS = [
     }
 ];
 
+// Кэш для товаров, чтобы не делать десятки запросов к ВБ при каждом открытии приложения
+let productsCache = {
+    data: null,
+    lastFetch: 0
+};
+const CACHE_TTL = 5 * 60 * 1000; // Кэшируем товары на 5 минут
+
 // Наш API для связи с фронтендом
 app.get('/api/products', async (req, res) => {
     try {
-        // Делаем реальный запрос к актуальному WB API от лица сервера 
-        const response = await fetch('https://content-api.wildberries.ru/content/v2/get/cards/list', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': WB_TOKEN
-            },
-            body: JSON.stringify({
-                // filter: { withPhoto: 1 } запрашивает только товары с фото, 
-                // что помогает отсеять неактивные черновики ("не в продаже")
-                settings: { cursor: { limit: 100 }, filter: { withPhoto: 1 } }
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`WB API error: ${response.statusText}`);
+        // Если товары скачивались меньше 5 минут назад, отдаем из кэша (мгновенно)
+        if (productsCache.data && (Date.now() - productsCache.lastFetch < CACHE_TTL)) {
+            return res.json({ products: productsCache.data });
         }
 
-        const data = await response.json();
-        
-        // Базовые ключевые слова для определения категории "Красота" 
-        // (WB API отдает только узкие подкатегории, поэтому мы проверяем их по словам)
-        const BEAUTY_KEYWORDS = ["крем", "сыворотк", "маск", "пенк", "гель", "лосьон", "тоник", "пилинг", "скраб", "умывани", "патчи", "шампунь", "бальзам", "косметик", "красот", "макияж"];
+        let allCards = [];
+        let currentCursor = { limit: 100 };
+        let hasMore = true;
 
+        // Вытягиваем ВСЕ товары через пагинацию (по 100 штук за раз)
+        while (hasMore) {
+            const response = await fetch('https://content-api.wildberries.ru/content/v2/get/cards/list', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': WB_TOKEN
+                },
+                body: JSON.stringify({
+                    settings: { cursor: currentCursor, filter: { withPhoto: 1 } }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`WB API error: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            
+            if (data && data.cards && data.cards.length > 0) {
+                allCards = allCards.concat(data.cards);
+            }
+
+            // Проверяем, есть ли следующая страница
+            if (data.cursor && data.cursor.updatedAt && data.cursor.nmID && data.cards && data.cards.length === 100) {
+                currentCursor = { 
+                    limit: 100, 
+                    updatedAt: data.cursor.updatedAt, 
+                    nmID: data.cursor.nmID 
+                };
+            } else {
+                hasMore = false; // Товары закончились
+            }
+        }
+        
         // Преобразуем формат WB в наш удобный формат для фронтенда
         let products = [];
-        if (data && data.cards && data.cards.length > 0) {
-            products = data.cards
-                .filter(card => {
-                    // Фильтр: Оставляем только товары из раздела Красота
-                    const subject = (card.subjectName || "").toLowerCase();
-                    // Проверяет вхождение ключевых слов бьюти-сферы в название подкатегории WB
-                    return BEAUTY_KEYWORDS.some(kw => subject.includes(kw));
-                })
-                .map(card => {
-                    return {
-                        id: card.nmID,
-                        nmId: card.nmID,
-                        brand: card.brand || "lumirex",
-                        name: card.title || "Без названия",
-                        // Цены полностью удалены
-                        rating: 4.8,
-                        reviewsCount: 150,
-                        subcategory: card.subjectName || "Красота",
-                        description: card.description || "Описание товара",
-                        images: card.photos && card.photos.length > 0 
-                            ? card.photos.map(p => p.big || p["516x774"]) 
-                            : ["https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&q=80&w=800"]
-                    };
-                });
+        if (allCards.length > 0) {
+            // Ключевые слова для фильтрации категории "Красота"
+            const BEAUTY_KEYWORDS = ['крем', 'сыворотк', 'косметик', 'макияж', 'умыван', 'маск', 'патч', 'лосьон', 'тоник', 'шампунь', 'бальзам', 'скраб', 'пилинг', 'гель', 'пена', 'парфюм', 'аромат', 'губ', 'ресниц', 'бровей', 'волос', 'лиц', 'тел', 'красота'];
+            
+            // Фильтруем карточки: оставляем только те, что относятся к бьюти-сфере
+            const beautyCards = allCards.filter(card => {
+                const subject = (card.subjectName || "").toLowerCase();
+                return BEAUTY_KEYWORDS.some(keyword => subject.includes(keyword));
+            });
+
+            products = beautyCards.map(card => {
+                return {
+                    id: card.nmID,
+                    nmId: card.nmID,
+                    brand: card.brand || "lumirex",
+                    name: card.title || "Без названия",
+                    subcategory: card.subjectName || "Красота",
+                    description: card.description || "Описание товара",
+                    // Достаем картинки из ответа WB
+                    images: card.photos && card.photos.length > 0 
+                        ? card.photos.map(p => p.big || p["516x774"]) 
+                        : ["https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&q=80&w=800"]
+                };
+            });
         } else {
-            // Если карточек пока нет, отдаем заглушки без цен
+            // Если карточек на аккаунте пока нет, отдаем заглушки
             products = MOCK_PRODUCTS;
         }
+
+        // Сохраняем в кэш
+        productsCache.data = products;
+        productsCache.lastFetch = Date.now();
 
         res.json({ products });
     } catch (error) {
         console.error("Ошибка при получении данных от WB:", error);
-        res.json({ products: MOCK_PRODUCTS });
+        // В случае ошибки отдаем то, что есть в кэше, либо заглушки
+        res.json({ products: productsCache.data || MOCK_PRODUCTS });
     }
 });
 
