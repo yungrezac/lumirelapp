@@ -39,7 +39,7 @@ const MOCK_PRODUCTS = [
 app.get('/api/products', async (req, res) => {
     try {
         // Делаем реальный запрос к WB API от лица сервера (CORS здесь не мешает)
-        const response = await fetch('https://suppliers-api.wildberries.ru/content/v2/get/cards/list', {
+        const response = await fetch('https://content-api.wildberries.ru/content/v2/get/cards/list', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
