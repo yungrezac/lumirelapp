@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>lumirex x WB</title>
+    <title>lumirel x WB</title>
     <!-- Telegram Mini App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- Tailwind CSS -->
@@ -47,13 +47,27 @@
             user-select: none;
         }
         
-        /* Скрываем скроллбары для горизонтальных списков, но оставляем функционал */
+        /* Скрываем скроллбары */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
         .no-scrollbar {
             -ms-overflow-style: none;
             scrollbar-width: none;
+        }
+
+        /* Анимация перелива для золотого текста */
+        @keyframes goldShine {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        .text-gold-shine {
+            background: linear-gradient(to right, #b8860b 0%, #ffd700 20%, #fff8dc 40%, #ffd700 60%, #b8860b 80%, #ffd700 100%);
+            background-size: 200% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: goldShine 4s linear infinite;
         }
 
         /* Анимации для модальных окон */
@@ -72,7 +86,6 @@
             transform: translateY(100%);
         }
 
-        /* Ограничение строк для названия товара */
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -89,10 +102,18 @@
 
     <!-- ГЛАВНЫЙ ЭКРАН -->
     <div id="main-view" class="pb-20">
-        <!-- Шапка: убрали sticky top-0 z-10 чтобы она скроллилась -->
-        <header class="bg-tg-bg border-b border-tg-secondaryBg shadow-sm pb-2">
-            <div class="px-4 py-3 flex justify-center items-center">
-                <h1 class="text-xl font-bold bg-gradient-to-r from-wb-purple to-wb-main text-transparent bg-clip-text">lumirex x WB</h1>
+        <!-- Шапка (Прокручивается вместе с контентом) -->
+        <header class="bg-tg-bg/90 backdrop-blur-md border-b border-tg-secondaryBg pb-2">
+            <!-- Название и кнопка Info -->
+            <div class="px-4 py-3 flex justify-between items-center">
+                <h1 class="text-xl font-bold flex items-center space-x-1.5">
+                    <span class="text-gold-shine drop-shadow-sm">lumirel</span>
+                    <span class="text-white" style="text-shadow: 0px 1px 3px rgba(0,0,0,0.5);">x</span>
+                    <span class="text-wb-main drop-shadow-sm">WB</span>
+                </h1>
+                <button onclick="openInfoModal()" class="text-tg-text active:scale-90 transition-transform">
+                    <i class="ph ph-info text-[26px]"></i>
+                </button>
             </div>
 
             <!-- Поиск -->
@@ -155,6 +176,40 @@
         </div>
     </div>
 
+    <!-- МОДАЛЬНОЕ ОКНО: Информация / Соцсети -->
+    <div id="info-modal-overlay" class="fixed inset-0 bg-black/50 z-40 hidden opacity-0 transition-opacity duration-300" onclick="closeInfoModal()"></div>
+    <div id="info-modal" class="fixed bottom-0 left-0 right-0 bg-tg-bg z-50 rounded-t-2xl shadow-xl modal-enter pb-8 flex flex-col hidden">
+        <div class="px-4 py-3 border-b border-tg-secondaryBg flex justify-between items-center">
+            <h2 class="text-lg font-bold text-tg-text">Наши соцсети</h2>
+            <button onclick="closeInfoModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-tg-secondaryBg text-tg-text">
+                <i class="ph ph-x text-lg"></i>
+            </button>
+        </div>
+        <div class="p-4 flex flex-col space-y-3">
+            <!-- Instagram -->
+            <a href="#" class="flex items-center space-x-3 p-3.5 rounded-xl bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] text-white active:scale-[0.98] transition-transform">
+                <i class="ph ph-instagram-logo text-[28px]"></i>
+                <span class="font-semibold text-[16px]">Instagram</span>
+            </a>
+            <!-- TikTok -->
+            <a href="#" class="flex items-center space-x-3 p-3.5 rounded-xl bg-black text-white active:scale-[0.98] transition-transform">
+                <i class="ph ph-tiktok-logo text-[28px]"></i>
+                <span class="font-semibold text-[16px]">TikTok</span>
+            </a>
+            <!-- Threads -->
+            <a href="#" class="flex items-center space-x-3 p-3.5 rounded-xl bg-[#101010] text-white active:scale-[0.98] transition-transform">
+                <i class="ph ph-threads-logo text-[28px]"></i>
+                <span class="font-semibold text-[16px]">Threads</span>
+            </a>
+            <!-- Max (Стилизованная кастомная кнопка) -->
+            <a href="#" class="flex items-center space-x-3 p-3.5 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-900 text-white active:scale-[0.98] transition-transform">
+                <!-- Кастомная иконка для Max -->
+                <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                <span class="font-semibold text-[16px]">Max</span>
+            </a>
+        </div>
+    </div>
+
     <!-- ЭКРАН ТОВАРА (На весь экран) -->
     <div id="product-view" class="fixed inset-0 bg-tg-bg z-30 hidden overflow-y-auto pb-24">
         <!-- Контент товара заполняется JS -->
@@ -172,32 +227,26 @@
     <script>
         // Инициализация Telegram SDK
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Открываем на всю высоту
+        tg.expand(); 
         
-        // Состояние приложения
         let allProducts = [];
         let filteredProducts = [];
         let currentProduct = null;
         
-        // Фильтры
         let searchQuery = '';
         let selectedSubcategory = 'Все';
         let selectedBrands = new Set();
         let availableBrands = new Set();
         let availableSubcategories = new Set(['Все']);
 
-        // Инициализация
         document.addEventListener('DOMContentLoaded', async () => {
             await fetchAndLoadData();
             setupEventListeners();
         });
 
-        // Загрузка данных с нашего бэкенда (Node.js/Railway)
         async function fetchAndLoadData() {
             try {
-                // Обращаемся к нашему серверу
                 const response = await fetch('/api/products');
-
                 if (response.ok) {
                     const data = await response.json();
                     allProducts = data.products;
@@ -210,7 +259,6 @@
                 return;
             }
 
-            // Извлекаем уникальные бренды и подкатегории
             allProducts.forEach(p => {
                 availableBrands.add(p.brand);
                 availableSubcategories.add(p.subcategory);
@@ -223,7 +271,6 @@
             applyFilters();
         }
 
-        // Рендер фильтра подкатегорий (Чипы)
         function renderSubcategories() {
             const container = document.getElementById('subcategoriesList');
             container.innerHTML = '';
@@ -235,14 +282,13 @@
                 btn.textContent = sub;
                 btn.onclick = () => {
                     selectedSubcategory = sub;
-                    renderSubcategories(); // Обновляем активный класс
+                    renderSubcategories(); 
                     applyFilters();
                 };
                 container.appendChild(btn);
             });
         }
 
-        // Рендер фильтра брендов (Модалка)
         function renderBrandsFilter() {
             const container = document.getElementById('brandsCheckboxes');
             container.innerHTML = '';
@@ -272,7 +318,6 @@
             });
         }
 
-        // Применение всех фильтров
         function applyFilters() {
             filteredProducts = allProducts.filter(p => {
                 const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.brand.toLowerCase().includes(searchQuery.toLowerCase());
@@ -283,7 +328,6 @@
             renderProducts();
         }
 
-        // Рендер сетки товаров (Дизайн как в приложении WB)
         function renderProducts() {
             const grid = document.getElementById('productsGrid');
             grid.innerHTML = '';
@@ -300,16 +344,11 @@
                 card.className = "bg-wb-card rounded-xl overflow-hidden shadow-sm border border-tg-secondaryBg flex flex-col active:scale-[0.98] transition-transform";
                 card.onclick = () => openProductDetails(product);
 
-                // Убраны цены и скидки
                 card.innerHTML = `
-                    <div class="relative w-full aspect-[3/4] bg-tg-secondaryBg">
-                        <img src="${product.images[0]}" alt="${product.name}" class="w-full h-full object-cover">
-                        <div class="absolute bottom-1 left-1 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded text-[11px] font-bold text-wb-main flex items-center space-x-1">
-                            <i class="ph-fill ph-star text-yellow-400"></i>
-                            <span>${product.rating}</span>
-                        </div>
+                    <div class="relative w-full aspect-[3/4] bg-white flex items-center justify-center p-1">
+                        <img src="${product.images[0]}" alt="${product.name}" class="w-full h-full object-contain rounded-lg">
                     </div>
-                    <div class="p-2 flex flex-col flex-1 mt-1">
+                    <div class="p-2 flex flex-col flex-1">
                         <div class="text-[13px] text-tg-hint mb-0.5 font-medium">${product.brand}</div>
                         <div class="text-[12px] text-tg-text leading-tight line-clamp-2">${product.name}</div>
                     </div>
@@ -318,42 +357,27 @@
             });
         }
 
-        // Открытие карточки товара
         function openProductDetails(product) {
             currentProduct = product;
             const view = document.getElementById('product-view');
             const content = document.getElementById('product-content');
 
-            // Генерация изображений (горизонтальный скролл)
             const imagesHtml = product.images.map(img => `
-                <div class="flex-none w-full h-[60vh] snap-center">
-                    <img src="${img}" class="w-full h-full object-cover" alt="Product Image">
+                <div class="flex-none w-full h-[60vh] snap-center bg-white flex items-center justify-center p-2">
+                    <img src="${img}" class="w-full h-full object-contain" alt="Product Image">
                 </div>
             `).join('');
 
-            // Убраны цены и скидки
             content.innerHTML = `
                 <div class="w-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar relative bg-tg-secondaryBg">
                     ${imagesHtml}
                 </div>
                 
                 <div class="p-4 bg-wb-card rounded-t-2xl -mt-4 relative z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-                    <div class="text-lg font-bold text-tg-hint mb-1 mt-2">${product.brand}</div>
+                    <div class="text-lg font-bold text-tg-hint mb-1">${product.brand}</div>
                     <h1 class="text-xl text-tg-text leading-tight mb-4">${product.name}</h1>
-                    
-                    <div class="flex items-center space-x-2 text-sm text-tg-hint mb-6 pb-4 border-b border-tg-secondaryBg">
-                        <div class="flex items-center space-x-1 text-yellow-500">
-                            <i class="ph-fill ph-star text-lg"></i>
-                            <span class="font-bold text-tg-text">${product.rating}</span>
-                        </div>
-                        <span>•</span>
-                        <span>${product.reviewsCount} оценок</span>
-                    </div>
-
                     <h3 class="font-bold text-lg text-tg-text mb-2">Описание</h3>
                     <p class="text-[15px] text-tg-text leading-relaxed opacity-90">${product.description}</p>
-                    
-                    <!-- Пространство для скролла под липкой кнопкой -->
                     <div class="h-8"></div> 
                 </div>
             `;
@@ -361,12 +385,10 @@
             view.classList.remove('hidden');
             window.scrollTo(0, 0);
 
-            // Настройка кнопки Back для Telegram SDK
             tg.BackButton.show();
             tg.BackButton.onClick(closeProductDetails);
         }
 
-        // Закрытие карточки товара
         function closeProductDetails() {
             document.getElementById('product-view').classList.add('hidden');
             currentProduct = null;
@@ -374,31 +396,24 @@
             tg.BackButton.offClick(closeProductDetails);
         }
 
-        // Управление модалкой брендов
+        // Логика Модалки Брендов
         function openBrandsModal() {
             const modal = document.getElementById('brands-modal');
             const overlay = document.getElementById('brands-modal-overlay');
-            
             overlay.classList.remove('hidden');
             modal.classList.remove('hidden');
-            
-            // Анимация
             setTimeout(() => {
                 overlay.classList.remove('opacity-0');
                 modal.classList.remove('modal-enter');
             }, 10);
-            
-            // Включаем скролл модалки, выключаем у body
             document.body.style.overflow = 'hidden';
         }
 
         function closeBrandsModal() {
             const modal = document.getElementById('brands-modal');
             const overlay = document.getElementById('brands-modal-overlay');
-            
             overlay.classList.add('opacity-0');
             modal.classList.add('modal-exit-active');
-            
             setTimeout(() => {
                 overlay.classList.add('hidden');
                 modal.classList.add('hidden');
@@ -420,6 +435,33 @@
             applyFilters();
         }
 
+        // Логика Модалки Info (Соцсети)
+        function openInfoModal() {
+            const modal = document.getElementById('info-modal');
+            const overlay = document.getElementById('info-modal-overlay');
+            overlay.classList.remove('hidden');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+                modal.classList.remove('modal-enter');
+            }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeInfoModal() {
+            const modal = document.getElementById('info-modal');
+            const overlay = document.getElementById('info-modal-overlay');
+            overlay.classList.add('opacity-0');
+            modal.classList.add('modal-exit-active');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                modal.classList.add('hidden');
+                modal.classList.remove('modal-exit-active');
+                modal.classList.add('modal-enter');
+                document.body.style.overflow = '';
+            }, 300);
+        }
+
         // Слушатели событий
         function setupEventListeners() {
             document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -429,7 +471,6 @@
 
             document.getElementById('openWbBtn').addEventListener('click', () => {
                 if(currentProduct) {
-                    // Открываем ссылку через метод Telegram SDK для открытия внешних ссылок
                     const wbUrl = `https://www.wildberries.ru/catalog/${currentProduct.nmId}/detail.aspx`;
                     tg.openLink(wbUrl);
                 }
