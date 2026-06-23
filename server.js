@@ -15,46 +15,37 @@ app.use(express.json());
 // Раздаем статические файлы фронтенда из папки public
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Моковые данные на случай, если по API пока ничего не придет (новый кабинет без карточек)
+// Моковые данные на случай, если сервер только-только проснулся и еще качает данные
 const MOCK_PRODUCTS = [
     {
-        id: 15682910, nmId: 15682910, brand: "lumirex",
-        name: "Сыворотка для лица увлажняющая с гиалуроновой кислотой",
-        rating: 4.8, reviewsCount: 1245,
-        subcategory: "Сыворотки",
-        description: "Профессиональная сыворотка lumirex обеспечивает глубокое увлажнение...",
+        id: 1, nmId: 1, brand: "lumirex",
+        name: "Подождите пару секунд, товары загружаются...",
+        subcategory: "Загрузка",
+        description: "Сервер обновляет кэш товаров. Пожалуйста, закройте и откройте приложение снова через 5 секунд.",
         images: ["https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&q=80&w=800"]
-    },
-    {
-        id: 29471622, nmId: 29471622, brand: "lumirex",
-        name: "Крем для лица ночной питательный",
-        rating: 4.9, reviewsCount: 890,
-        subcategory: "Кремы",
-        description: "Ночной крем интенсивно питает кожу во время сна...",
-        images: ["https://images.unsplash.com/photo-1611074585206-9032e2195f00?auto=format&fit=crop&q=80&w=800"]
     }
 ];
 
-// Кэш для товаров, чтобы не делать десятки запросов к ВБ при каждом открытии приложения
+// Наше хранилище (Кэш) в оперативной памяти сервера
 let productsCache = {
     data: null,
-    lastFetch: 0
+    isFetching: false,
+    lastUpdate: null
 };
-const CACHE_TTL = 5 * 60 * 1000; // Кэшируем товары на 5 минут
 
-// Наш API для связи с фронтендом
-app.get('/api/products', async (req, res) => {
+// ⚡ ГЛАВНАЯ МАГИЯ: ФУНКЦИЯ ФОНОВОГО КЭШИРОВАНИЯ
+async function updateCacheBackground() {
+    // Если уже качаем прямо сейчас - не запускаем второй раз
+    if (productsCache.isFetching) return;
+    productsCache.isFetching = true;
+
     try {
-        // Если товары скачивались меньше 5 минут назад, отдаем из кэша (мгновенно)
-        if (productsCache.data && (Date.now() - productsCache.lastFetch < CACHE_TTL)) {
-            return res.json({ products: productsCache.data });
-        }
-
+        console.log("Начинаем фоновую загрузку всех товаров с WB...");
         let allCards = [];
         let currentCursor = { limit: 100 };
         let hasMore = true;
 
-        // Вытягиваем ВСЕ товары через пагинацию (по 100 штук за раз)
+        // Вытягиваем ВСЕ товары через пагинацию
         while (hasMore) {
             const response = await fetch('https://content-api.wildberries.ru/content/v2/get/cards/list', {
                 method: 'POST',
@@ -67,46 +58,39 @@ app.get('/api/products', async (req, res) => {
                 })
             });
 
-            if (!response.ok) {
-                throw new Error(`WB API error: ${response.statusText}`);
-            }
+            if (!response.ok) throw new Error(`WB API error: ${response.statusText}`);
 
             const data = await response.json();
             
             if (data && data.cards && data.cards.length > 0) {
                 allCards = allCards.concat(data.cards);
-                
-                // Надежная логика пагинации ВБ: передаем их же курсор дальше
                 if (data.cursor && data.cards.length === 100) {
                     currentCursor = data.cursor;
                     currentCursor.limit = 100;
                 } else {
-                    hasMore = false; // Последняя страница (меньше 100 товаров)
+                    hasMore = false;
                 }
             } else {
-                hasMore = false; // Пустой ответ
+                hasMore = false;
             }
         }
         
-        // Преобразуем формат WB в наш удобный формат для фронтенда
-        let products = [];
         if (allCards.length > 0) {
-            // ФИЛЬТР: Проверяем именно массив тегов (ярлыков), заданных в кабинете продавца WB
-            const targetTags = ['беликам', 'интерфармакс'];
+            // ФИЛЬТР ПО ЯРЛЫКАМ (ТЕГАМ) ВБ
+            const targetLabels = ['беликам', 'интерфармакс'];
             
-            const taggedCards = allCards.filter(card => {
-                // Если у товара нет ярлыков, пропускаем его
+            const filteredCards = allCards.filter(card => {
                 if (!card.tags || !Array.isArray(card.tags)) return false;
                 
-                // Проверяем, есть ли среди ярлыков нужные нам
+                // Проверяем каждый тег товара
                 return card.tags.some(tag => {
-                    // API WB может отдавать теги как объекты {id: 1, name: "тег"} или строки
-                    const tagName = typeof tag === 'string' ? tag : (tag.name || '');
-                    return targetTags.includes(tagName.toLowerCase().trim());
+                    if (!tag || !tag.name) return false;
+                    const tagLower = tag.name.toLowerCase().replace(/\s|-/g, '');
+                    return targetLabels.some(label => tagLower.includes(label));
                 });
             });
 
-            products = taggedCards.map(card => {
+            const products = filteredCards.map(card => {
                 return {
                     id: card.nmID,
                     nmId: card.nmID,
@@ -114,26 +98,40 @@ app.get('/api/products', async (req, res) => {
                     name: card.title || "Без названия",
                     subcategory: card.subjectName || "Красота",
                     description: card.description || "Описание товара",
-                    // Достаем картинки из ответа WB
                     images: card.photos && card.photos.length > 0 
                         ? card.photos.map(p => p.big || p["516x774"]) 
                         : ["https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&q=80&w=800"]
                 };
             });
-        } else {
-            // Если карточек на аккаунте пока нет, отдаем заглушки
-            products = MOCK_PRODUCTS;
+
+            // Сохраняем в оперативную память
+            productsCache.data = products;
+            productsCache.lastUpdate = new Date().toLocaleString();
+            console.log(`[УСПЕХ] Кэш обновлен. Всего карточек: ${allCards.length}. Под ярлыки попало: ${products.length} шт.`);
         }
-
-        // Сохраняем в кэш
-        productsCache.data = products;
-        productsCache.lastFetch = Date.now();
-
-        res.json({ products });
     } catch (error) {
-        console.error("Ошибка при получении данных от WB:", error);
-        // В случае ошибки отдаем то, что есть в кэше, либо заглушки
-        res.json({ products: productsCache.data || MOCK_PRODUCTS });
+        console.error("[ОШИБКА] Фоновое обновление не удалось:", error);
+    } finally {
+        productsCache.isFetching = false;
+    }
+}
+
+// 1. При старте сервера СРАЗУ запускаем фоновое скачивание данных
+updateCacheBackground();
+
+// 2. Повторяем загрузку каждые 10 минут (в фоне, покупатели этого не заметят!)
+setInterval(updateCacheBackground, 10 * 60 * 1000);
+
+
+// API ДЛЯ ФРОНТЕНДА: ОТДАЕТ ДАННЫЕ МГНОВЕННО ИЗ КЭША
+app.get('/api/products', (req, res) => {
+    if (productsCache.data) {
+        // Данные готовы — отдаем моментально
+        res.json({ products: productsCache.data });
+    } else {
+        // Если сервер проснулся от спячки и еще не успел скачать данные с ВБ
+        // Отдаем заглушку, чтобы интерфейс приложения не ломался и не висел
+        res.json({ products: MOCK_PRODUCTS });
     }
 });
 
